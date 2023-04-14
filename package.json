@@ -1,0 +1,27 @@
+{
+  "name": "gamejam23.time",
+  "version": "1.0.0",
+  "description": "",
+  "main": "module",
+  "scripts": {
+    "start": "vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^8.38.0",
+    "@typescript-eslint/eslint-plugin": "^5.40.0",
+		"@typescript-eslint/parser": "^5.40.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.8.7",
+    "typescript": "^5.0.4",
+    "vite": "^4.2.1"
+  },
+  "dependencies": {
+    "phaser": "^3.60.0"
+  }
+}
