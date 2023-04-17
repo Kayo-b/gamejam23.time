@@ -11,14 +11,38 @@ export default class Demo extends Phaser.Scene
 	scoreText!: Phaser.GameObjects.Text;
 	bombs!: Phaser.Physics.Arcade.Group;
 	gameOver: boolean;
+	WASD!: {
+        W: Phaser.Input.Keyboard.Key;
+        A: Phaser.Input.Keyboard.Key;
+        S: Phaser.Input.Keyboard.Key;
+        D: Phaser.Input.Keyboard.Key;
+    };
+	pointer!: Phaser.Input.Pointer;
+	contextLost!: Phaser.Events.EventEmitter;
+	
 
-
+	createWASDKeys(input: Phaser.Input.InputPlugin) {
+		if (!input.keyboard) {
+			throw new Error('Keyboard input not enabled for scene');
+		}
+		return {
+			W:
+			input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+			A:
+			input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+			S:
+			input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+			D:
+			input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
+		}
+	}
 
     constructor ()
     {
         super('demo');
 		this.score = 0;
 		this.gameOver = false;
+		
     }
 	
 
@@ -29,14 +53,13 @@ export default class Demo extends Phaser.Scene
     this.load.image('ground', 'dist/assets/platform.png');
     this.load.image('star', 'dist/assets/star.png');
     this.load.image('bomb', 'dist/assets/bomb.png');
-    this.load.spritesheet('dude', 
-        'dist/assets/dude.png',
-        { frameWidth: 32, frameHeight: 48 }
-    );
+    this.load.image('dude', 
+        'dist/assets/dude.png')
     }
 	
     create ()
     {
+		this.WASD = this.createWASDKeys(this.input);
 		this.cursors = this.input.keyboard!.createCursorKeys();
 		//this.scoreText = this.add.text(this, 16, 16, 'score: 0', { fontSize: '62px', color: '#fff' });
        
@@ -50,42 +73,56 @@ export default class Demo extends Phaser.Scene
 		this.platforms.create(750, 220, 'ground');
 
 		this.player = this.physics.add.sprite(100, 450, 'dude')
-		this.player.setBounce(0.2);
+		this.player.displayWidth = 80;
+		this.player.displayHeight = 80;
+		//this.player.setBounce(0.2);
 		this.player.setCollideWorldBounds(true);
+		this.player.setDrag(1000);
+
+		// this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+		// 	const angle = Phaser.Math.Angle.Between(
+		// 		this.player.x,
+		// 		this.player.y,
+		// 		pointer.x,
+		// 		pointer.y
+		// 	);
+		// 	this.player.setRotation(angle);
+
+		// });
 
 		// this.physics.add.sprite(100, 450, 'dude').setBounce(0.2);
 		// this.physics.add.sprite(100, 450, 'dude').setCollideWorldBounds(true);
 
-		this.anims.create( {
-			key: 'left',
-			frames: this.anims.generateFrameNames('dude', { 
-				start: 0,
-				end: 3
-			}),
-				frameRate: 10,
-				repeat: -1
+		// this.anims.create( {
+		// 	key: 'left',
+		// 	frames: this.anims.generateFrameNames('dude', { 
+		// 		start: 0,
+		// 		end: 3
+		// 	}),
+		// 		frameRate: 10,
+		// 		repeat: -1
 
-		});
+		// });
 
-		this.anims.create( {
-			key: 'turn',
-			frames: [ {
-				key: 'dude', frame: 4
-			}],
-			frameRate: 20
-		});
+		// this.anims.create( {
+		// 	key: 'turn',
+		// 	frames: [ {
+		// 		key: 'dude', frame: 4
+		// 	}],
+		// 	frameRate: 20
+		// });
 
-		this.anims.create ( { 
-			key: 'right',
-			frames: this.anims.generateFrameNumbers('dude', {
-				start: 5,
-				end: 8
-			}),
-			frameRate: 10,
-			repeat: -1
-		});
+		// this.anims.create ( { 
+		// 	key: 'right',
+		// 	frames: this.anims.generateFrameNumbers('dude', {
+		// 		start: 5,
+		// 		end: 8
+		// 	}),
+		// 	frameRate: 10,
+		// 	repeat: -1
+		// });
 
-		this.physics.add.collider(this.player, this.platforms)
+		// this.physics.add.collider(this.player, this.platforms)
 
 		this.stars = this.physics.add.group( {
 			key: 'star',
@@ -98,64 +135,107 @@ export default class Demo extends Phaser.Scene
 			return null;
 			
 		})
-		this.bombs = this.physics.add.group();
-		this.physics.add.collider(this.bombs, this.platforms)
-		this.physics.add.collider(this.bombs, this.player, this.hitBomb, undefined, this)
+		//this.bombs = this.physics.add.group();
+		// this.physics.add.collider(this.bombs, this.platforms)
+		//this.physics.add.collider(this.bombs, this.player, this.hitBomb, undefined, this)
 
-		this.physics.add.collider(this.stars, this.platforms)
+		// this.physics.add.collider(this.stars, this.platforms)
 		this.physics.add.overlap(this.player, this.stars, this.collectStar, undefined, this)
 		this.scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', color: '#000' });
-    }
-	
-	hitBomb(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
-		bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
-		this.physics.pause();
-		this.player.setTint(0xff0000);
-		this.player.anims.play('turn');
-		this.gameOver = true;
+   
 	}
+	
+	// hitBomb(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+	// 	bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+
+	// 	this.physics.pause();
+	// 	this.player.setTint(0xff0000);
+	// 	this.player.anims.play('turn');
+	// 	this.gameOver = true;
+	// }
 
 	collectStar(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
 		star: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+
 		let sprite = star as Phaser.Physics.Arcade.Sprite;
 		sprite.disableBody(true, true);
 		this.score += 10;
 		this.scoreText.setText('Score: ' + this.score);
 
-		if(this.stars.countActive(true) === 0) {
-			this.stars.children.iterate(child => {
-				let sprite = child as Phaser.Physics.Arcade.Sprite;
-				sprite.enableBody(true, sprite.x, 0, true, true);
-				return null;
-			});
-		};
+		// if(this.stars.countActive(true) === 0) {
+		// 	this.stars.children.iterate(child => {
 
-		var x = (this.player.x < 400) ? Phaser.Math.Between(400,800) : Phaser.Math.Between(0, 400);
-		var bomb = this.bombs.create(x, 16, 'bomb');
-		bomb.setBounce(1);
-		bomb.setCollideWorldBounds(true);
-		bomb.setVelocity(Phaser.Math.Between(-200, 200),20); 
+		// 		let sprite = child as Phaser.Physics.Arcade.Sprite;
+		// 		sprite.enableBody(true, sprite.x, 0, true, true);
+		// 		return null;
+		// 	});
+		// };
+
+		// var x = (this.player.x < 400) ? Phaser.Math.Between(400,800) : Phaser.Math.Between(0, 400);
+		// var bomb = this.bombs.create(x, 16, 'bomb');
+		// bomb.setBounce(1);
+		// bomb.setCollideWorldBounds(true);
+		// bomb.setVelocity(Phaser.Math.Between(-200, 200),20); 
 	}
 
 	update() 
-	{
-		if(this.cursors && this.cursors.left.isDown) {
-			this.player.setVelocityX(-160);
-			this.player.anims.play('left', true)
+	{	
+
+		// Update player rotation
+        const pointer = this.input.activePointer;
+        const angle = Phaser.Math.Angle.Between(
+            this.player.x,
+            this.player.y,
+            pointer.x,
+            pointer.y
+        );
+        this.player.setRotation(angle);
+
+        // Update player velocity
+        let newAngle;
+		let speed = 500;
+
+		if(this.WASD.W.isDown) {
+           	newAngle = this.player.rotation;
+			   
+		} else if(this.WASD.S.isDown) {
+			newAngle = this.player.rotation + Math.PI;
+		} 
+		
+		if(this.WASD.A.isDown) {
+			if(this.WASD.S.isDown) {
+				newAngle = (newAngle !== undefined) ?
+				(newAngle + Math.PI/4) : (this.player.rotation - Math.PI/2)
+			} else {
+				newAngle = (newAngle !== undefined) ?
+				(newAngle - Math.PI/4) : (this.player.rotation - Math.PI/2)
+			}
+
+		} else if(this.WASD.D.isDown) {
+			if(this.WASD.S.isDown) {
+				newAngle = (newAngle !== undefined) ?
+				(newAngle - Math.PI/4) : (this.player.rotation + Math.PI/2)
+			} else {
+				newAngle = (newAngle !== undefined) ?
+				(newAngle + Math.PI/4) : (this.player.rotation + Math.PI/2)
 		}
-		else if(this.cursors.right.isDown) {
-			this.player.setVelocityX(160);
-			this.player.anims.play('right', true);
+		} 
+
+		if(newAngle !== undefined) {
+			this.physics.velocityFromRotation(
+				newAngle,
+				speed,
+				(<Phaser.Physics.Arcade.Body>this.player.body).velocity
+			);
 		} else {
-			this.player.setVelocityX(0);
-			this.player.anims.play('turn')
+			this.player.setVelocity(0)
 		}
-		if(this.cursors.up.isDown && this.player.body!.touching.down) {
-			this.player.setVelocityY(-630)
-		}
+
 	}
 
 }
+
+
 
 // const config = {
 //     type: Phaser.AUTO,
