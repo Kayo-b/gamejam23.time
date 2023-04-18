@@ -19,6 +19,7 @@ export default class Demo extends Phaser.Scene
     };
 	pointer!: Phaser.Input.Pointer;
 	contextLost!: Phaser.Events.EventEmitter;
+
 	
 
 	createWASDKeys(input: Phaser.Input.InputPlugin) {
@@ -79,51 +80,6 @@ export default class Demo extends Phaser.Scene
 		this.player.setCollideWorldBounds(true);
 		this.player.setDrag(1000);
 
-		// this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-		// 	const angle = Phaser.Math.Angle.Between(
-		// 		this.player.x,
-		// 		this.player.y,
-		// 		pointer.x,
-		// 		pointer.y
-		// 	);
-		// 	this.player.setRotation(angle);
-
-		// });
-
-		// this.physics.add.sprite(100, 450, 'dude').setBounce(0.2);
-		// this.physics.add.sprite(100, 450, 'dude').setCollideWorldBounds(true);
-
-		// this.anims.create( {
-		// 	key: 'left',
-		// 	frames: this.anims.generateFrameNames('dude', { 
-		// 		start: 0,
-		// 		end: 3
-		// 	}),
-		// 		frameRate: 10,
-		// 		repeat: -1
-
-		// });
-
-		// this.anims.create( {
-		// 	key: 'turn',
-		// 	frames: [ {
-		// 		key: 'dude', frame: 4
-		// 	}],
-		// 	frameRate: 20
-		// });
-
-		// this.anims.create ( { 
-		// 	key: 'right',
-		// 	frames: this.anims.generateFrameNumbers('dude', {
-		// 		start: 5,
-		// 		end: 8
-		// 	}),
-		// 	frameRate: 10,
-		// 	repeat: -1
-		// });
-
-		// this.physics.add.collider(this.player, this.platforms)
-
 		this.stars = this.physics.add.group( {
 			key: 'star',
 			repeat: 11,
@@ -135,24 +91,21 @@ export default class Demo extends Phaser.Scene
 			return null;
 			
 		})
-		//this.bombs = this.physics.add.group();
-		// this.physics.add.collider(this.bombs, this.platforms)
-		//this.physics.add.collider(this.bombs, this.player, this.hitBomb, undefined, this)
-
-		// this.physics.add.collider(this.stars, this.platforms)
+		this.bombs = this.physics.add.group();
+		this.physics.add.collider(this.bombs, this.player, this.hitBomb, undefined, this)
 		this.physics.add.overlap(this.player, this.stars, this.collectStar, undefined, this)
 		this.scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', color: '#000' });
    
 	}
 	
-	// hitBomb(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
-	// 	bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+	hitBomb(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+		bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
 
-	// 	this.physics.pause();
-	// 	this.player.setTint(0xff0000);
-	// 	this.player.anims.play('turn');
-	// 	this.gameOver = true;
-	// }
+		this.physics.pause();
+		this.player.setTint(0xff0000);
+		this.player.anims.play('turn');
+		this.gameOver = true;
+	}
 
 	collectStar(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
 		star: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
@@ -171,11 +124,11 @@ export default class Demo extends Phaser.Scene
 		// 	});
 		// };
 
-		// var x = (this.player.x < 400) ? Phaser.Math.Between(400,800) : Phaser.Math.Between(0, 400);
-		// var bomb = this.bombs.create(x, 16, 'bomb');
-		// bomb.setBounce(1);
-		// bomb.setCollideWorldBounds(true);
-		// bomb.setVelocity(Phaser.Math.Between(-200, 200),20); 
+		var x = (this.player.x < 400) ? Phaser.Math.Between(400,800) : Phaser.Math.Between(0, 400);
+		var bomb = this.bombs.create(x, 16, 'bomb');
+		bomb.setBounce(1);
+		bomb.setCollideWorldBounds(true);
+		bomb.setVelocity(Phaser.Math.Between(-200, 200),20); 
 	}
 
 	update() 
@@ -231,24 +184,19 @@ export default class Demo extends Phaser.Scene
 			this.player.setVelocity(0)
 		}
 
+		//setting up bomb chasing after the player
+		this.bombs.children.iterate((bomb:  Phaser.GameObjects.GameObject) => {
+			let newBomb = bomb as Phaser.Physics.Arcade.Image
+			let angle =
+			Phaser.Math.Angle.Between(newBomb.x, newBomb.y, this.player.x, this.player.y);
+			let velocity = new Phaser.Math.Vector2();
+			velocity.setToPolar(angle, 100);//speed of the bomb
+
+			newBomb.setVelocity(velocity.x, velocity.y);
+			return null
+		});
+
 	}
 
 }
 
-
-
-// const config = {
-//     type: Phaser.AUTO,
-//     backgroundColor: '#125555',
-//     width: 800,
-//     height: 600,
-//     scene: Demo,
-// 	physics: {
-// 		default: 'arcade',
-// 		arcade: {
-// 			gravity: { x: 900 },
-// 		},
-// 	},
-// };
-
-// const game = new Phaser.Game(config);
