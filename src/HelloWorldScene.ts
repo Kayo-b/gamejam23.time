@@ -19,6 +19,8 @@ export default class Demo extends Phaser.Scene
     };
 	pointer!: Phaser.Input.Pointer;
 	contextLost!: Phaser.Events.EventEmitter;
+	projectiles!: Phaser.Physics.Arcade.Group;
+	fire!: Phaser.Input.Pointer;
 
 	
 
@@ -36,6 +38,18 @@ export default class Demo extends Phaser.Scene
 			D:
 			input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
 		}
+	}
+
+	createFireButton() {
+
+		this.input.on('pointerdown', (pointer:Phaser.Input.Pointer) => {
+			
+			if(pointer.leftButtonDown()) {
+				const angle = this.player.rotation;
+				this.shootProjectile(angle);
+				this.fire = pointer;
+			}
+		})
 	}
 
     constructor ()
@@ -56,12 +70,14 @@ export default class Demo extends Phaser.Scene
     this.load.image('bomb', 'dist/assets/bomb.png');
     this.load.image('dude', 
         'dist/assets/dude.png')
+	this.load.image('projectile', 'dist/assets/pewpew-1.png')
     }
 	
     create ()
     {
 		this.WASD = this.createWASDKeys(this.input);
 		this.cursors = this.input.keyboard!.createCursorKeys();
+		this.createFireButton()
 		//this.scoreText = this.add.text(this, 16, 16, 'score: 0', { fontSize: '62px', color: '#fff' });
        
 		this.add.image(400, 300, 'sky');
@@ -95,7 +111,19 @@ export default class Demo extends Phaser.Scene
 		this.physics.add.collider(this.bombs, this.player, this.hitBomb, undefined, this)
 		this.physics.add.overlap(this.player, this.stars, this.collectStar, undefined, this)
 		this.scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', color: '#000' });
+		this.projectiles = this.physics.add.group()
    
+	}
+
+	shootProjectile(angle: number) {
+		let projectile = this.projectiles.create(this.player.x, this.player.y, 'projectile')
+		let speed = 600;
+		projectile.body.velocity.x = Math.cos(angle) * speed;
+		console.log(Math.cos(angle))
+		projectile.body.velocity.y = Math.sin(angle) * speed;
+		console.log(Math.sin(angle))
+		projectile.displayHeight = 15;
+		projectile.displayWidth = 15;
 	}
 	
 	hitBomb(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
@@ -143,7 +171,8 @@ export default class Demo extends Phaser.Scene
             pointer.y
         );
         this.player.setRotation(angle);
-
+		
+		
         // Update player velocity
         let newAngle;
 		let speed = 500;
@@ -195,6 +224,8 @@ export default class Demo extends Phaser.Scene
 			newBomb.setVelocity(velocity.x, velocity.y);
 			return null
 		});
+
+		
 
 	}
 
