@@ -7,8 +7,9 @@ export default class Demo extends Phaser.Scene
 	player!: Phaser.Physics.Arcade.Sprite;
 	cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
 	stars!: Phaser.Physics.Arcade.Group;
-	score: number;
-	scoreText!: Phaser.GameObjects.Text;
+	timeRemaining!: number;
+	timerText!: Phaser.GameObjects.Text;
+	gameOverText!: Phaser.GameObjects.Text;
 	bombs!: Phaser.Physics.Arcade.Group;
 	gameOver: boolean;
 	WASD!: {
@@ -46,7 +47,7 @@ export default class Demo extends Phaser.Scene
 			
 			if(pointer.leftButtonDown()) {
 				const angle = this.player.rotation;
-				this.shootProjectile(angle);
+				this.shootProjectile(angle + Phaser.Math.DegToRad(-47));
 				this.fire = pointer;
 			}
 		})
@@ -55,7 +56,7 @@ export default class Demo extends Phaser.Scene
     constructor ()
     {
         super('demo');
-		this.score = 0;
+		
 		this.gameOver = false;
 		
     }
@@ -68,8 +69,8 @@ export default class Demo extends Phaser.Scene
     this.load.image('ground', 'dist/assets/platform.png');
     this.load.image('star', 'dist/assets/star.png');
     this.load.image('bomb', 'dist/assets/bomb.png');
-    this.load.image('dude', 
-        'dist/assets/dude.png')
+    this.load.spritesheet('dude', 
+        'dist/assets/dude.png', {frameWidth: 100, frameHeight: 100})
 	this.load.image('projectile', 'dist/assets/pewpew-1.png')
     }
 	
@@ -78,8 +79,7 @@ export default class Demo extends Phaser.Scene
 		this.WASD = this.createWASDKeys(this.input);
 		this.cursors = this.input.keyboard!.createCursorKeys();
 		this.createFireButton()
-		//this.scoreText = this.add.text(this, 16, 16, 'score: 0', { fontSize: '62px', color: '#fff' });
-       
+		
 		this.add.image(400, 300, 'sky');
         this.add.image(400, 300, 'star');
 		this.platforms = this.physics.add.staticGroup();
@@ -90,12 +90,20 @@ export default class Demo extends Phaser.Scene
 		this.platforms.create(750, 220, 'ground');
 
 		this.player = this.physics.add.sprite(100, 450, 'dude')
-		this.player.displayWidth = 80;
-		this.player.displayHeight = 80;
-		//this.player.setBounce(0.2);
+		
+		this.player.setFrame(0)
 		this.player.setCollideWorldBounds(true);
 		this.player.setDrag(1000);
 
+		this.anims.create({
+			key: 'alldirections',
+			frames: this.anims.generateFrameNames('dude', { 
+				start: 0,
+				end: 2
+			}),
+				frameRate: 10,
+				repeat: -1
+		})
 		this.stars = this.physics.add.group( {
 			key: 'star',
 			repeat: 11,
@@ -107,41 +115,112 @@ export default class Demo extends Phaser.Scene
 			return null;
 			
 		})
+
+		this.time.addEvent({
+			delay:3000,
+			callback: () => {
+				var x = (this.player.x < 400) ? Phaser.Math.Between(400,800) : Phaser.Math.Between(0, 400);
+				var bomb = this.bombs.create(x, 16, 'bomb');
+				bomb.setCollideWorldBounds(true);
+				bomb.setVelocity(Phaser.Math.Between(-300, 800),200); 
+			},
+			loop:true
+		});
 		this.bombs = this.physics.add.group();
+		this.projectiles = this.physics.add.group()
 		this.physics.add.collider(this.bombs, this.player, this.hitBomb, undefined, this)
 		this.physics.add.overlap(this.player, this.stars, this.collectStar, undefined, this)
-		this.scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', color: '#000' });
-		this.projectiles = this.physics.add.group()
+		this.physics.add.collider(this.projectiles, this.bombs, this.projectileHit, undefined, this)
+		
+		this.gameOverText = this.add.text(450, 100, "", {fontSize:'48px', color:'red'})
+
+		this.timeRemaining = 30;
+		this.timerText = this.add.text(16, 16, `Time: ${this.timeRemaining}`, { fontSize: '24px', color: '#fff' });
+		this.time.addEvent({
+			delay: 1000,
+			callback: () => {
+				this.timeRemaining--;
+				this.timeRemaining > 0 ? this.timerText.setText(`Time: ${this.timeRemaining}`) :this.timerText.setText(`Time: 0`);
+			},
+			loop: true
+		});
    
 	}
 
 	shootProjectile(angle: number) {
-		let projectile = this.projectiles.create(this.player.x, this.player.y, 'projectile')
+		let projectile = this.projectiles.create(this.player.x, this.player.y, 'projectile');
+		projectile.rotation = angle + Math.PI / 2;
 		let speed = 600;
 		projectile.body.velocity.x = Math.cos(angle) * speed;
-		console.log(Math.cos(angle))
 		projectile.body.velocity.y = Math.sin(angle) * speed;
-		console.log(Math.sin(angle))
 		projectile.displayHeight = 15;
-		projectile.displayWidth = 15;
+		projectile.displayWidth = 3;
 	}
 	
 	hitBomb(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
 		bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
-
-		this.physics.pause();
-		this.player.setTint(0xff0000);
+		let bombSprite = bomb as Phaser.Physics.Arcade.Sprite;
+		var color = Phaser.Display.Color.GetColor32(255, 0, 0, 0);
+		bombSprite.disableBody(true, true)
+		this.timeRemaining -= 10;
 		this.player.anims.play('turn');
-		this.gameOver = true;
+		this.player.setTintFill(color).setAlpha(0.5)
+		
+		this.time.addEvent({
+			delay: 150,
+			callback: () => {
+				this.player.clearTint();
+				this.player.setAlpha(1)
+			}
+		})
+
+		
 	}
 
+	timeSystem() {
+		if(this.timeRemaining <= 0) {
+			this.physics.pause(); 
+			this.gameOverText.setText("Game Over");
+			this.player.setTintFill(0x1AFF0000)
+			this.gameOver = true;
+		}
+	
+	}
+
+	projectileHit(projectile: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+		 bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
+		
+			if(projectile && bomb) {
+				let bombSprite = bomb as Phaser.Physics.Arcade.Sprite;
+				let projectileSprite = projectile as Phaser.Physics.Arcade.Sprite;
+				this.timeRemaining += 5;
+				this.timerText.appendText("+5s")
+				bombSprite.disableBody(true, true);
+				projectileSprite.disableBody(true, true);
+
+				const x = (bombSprite.x + projectileSprite.x) / 2;
+				const y = (bombSprite.y + projectileSprite.y) / 2;
+
+				const scoreTest = this.add.text(x,y, "+5s", {
+					fontSize:'18px', 
+					color:'red'
+				})
+				scoreTest.setOrigin(0.5, 0.5);
+
+				this.time.delayedCall(1000, () => {
+				scoreTest.destroy();
+			})
+        
+			}
+
+		}			
 	collectStar(player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
 		star: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile) {
 
 		let sprite = star as Phaser.Physics.Arcade.Sprite;
 		sprite.disableBody(true, true);
-		this.score += 10;
-		this.scoreText.setText('Score: ' + this.score);
+		this.timeRemaining += 6;
+		// this.timerText.setText('Score: ' + this.timer);
 
 		// if(this.stars.countActive(true) === 0) {
 		// 	this.stars.children.iterate(child => {
@@ -156,7 +235,7 @@ export default class Demo extends Phaser.Scene
 		var bomb = this.bombs.create(x, 16, 'bomb');
 		bomb.setBounce(1);
 		bomb.setCollideWorldBounds(true);
-		bomb.setVelocity(Phaser.Math.Between(-200, 200),20); 
+		bomb.setVelocity(Phaser.Math.Between(-300, 800),200); 
 	}
 
 	update() 
@@ -170,7 +249,7 @@ export default class Demo extends Phaser.Scene
             pointer.x,
             pointer.y
         );
-        this.player.setRotation(angle);
+        this.player.setRotation(angle + Phaser.Math.DegToRad(47));
 		
 		
         // Update player velocity
@@ -178,28 +257,32 @@ export default class Demo extends Phaser.Scene
 		let speed = 500;
 
 		if(this.WASD.W.isDown) {
-           	newAngle = this.player.rotation;
+           	newAngle = this.player.rotation - Phaser.Math.DegToRad(47);
+			this.player.anims.play('alldirections', true);
 			   
 		} else if(this.WASD.S.isDown) {
-			newAngle = this.player.rotation + Math.PI;
+			newAngle = this.player.rotation + Math.PI - Phaser.Math.DegToRad(47);
+			this.player.anims.play('alldirections', true);
 		} 
+
+
 		
 		if(this.WASD.A.isDown) {
 			if(this.WASD.S.isDown) {
 				newAngle = (newAngle !== undefined) ?
-				(newAngle + Math.PI/4) : (this.player.rotation - Math.PI/2)
+				(newAngle + Math.PI/4 - Phaser.Math.DegToRad(47)) : (this.player.rotation - Math.PI/2 - Phaser.Math.DegToRad(47))
 			} else {
 				newAngle = (newAngle !== undefined) ?
-				(newAngle - Math.PI/4) : (this.player.rotation - Math.PI/2)
+				(newAngle - Math.PI/4 - Phaser.Math.DegToRad(47)) : (this.player.rotation - Math.PI/2 - Phaser.Math.DegToRad(47))
 			}
 
 		} else if(this.WASD.D.isDown) {
 			if(this.WASD.S.isDown) {
 				newAngle = (newAngle !== undefined) ?
-				(newAngle - Math.PI/4) : (this.player.rotation + Math.PI/2)
+				(newAngle - Math.PI/4 - Phaser.Math.DegToRad(47)) : (this.player.rotation + Math.PI/2 - Phaser.Math.DegToRad(47))
 			} else {
 				newAngle = (newAngle !== undefined) ?
-				(newAngle + Math.PI/4) : (this.player.rotation + Math.PI/2)
+				(newAngle + Math.PI/4 - Phaser.Math.DegToRad(47)) : (this.player.rotation + Math.PI/2 - Phaser.Math.DegToRad(47))
 		}
 		} 
 
@@ -219,12 +302,12 @@ export default class Demo extends Phaser.Scene
 			let angle =
 			Phaser.Math.Angle.Between(newBomb.x, newBomb.y, this.player.x, this.player.y);
 			let velocity = new Phaser.Math.Vector2();
-			velocity.setToPolar(angle, 100);//speed of the bomb
+			velocity.setToPolar(angle, 300);//speed of the bomb
 
 			newBomb.setVelocity(velocity.x, velocity.y);
 			return null
 		});
-
+		this.timeSystem()
 		
 
 	}
