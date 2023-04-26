@@ -99,9 +99,18 @@ export default class Demo extends Phaser.Scene
 			key: 'alldirections',
 			frames: this.anims.generateFrameNames('dude', { 
 				start: 0,
-				end: 2
+				end: 8
 			}),
-				frameRate: 10,
+				frameRate: 20,
+				repeat: -1
+		})
+		this.anims.create({
+			key: 'dead',
+			frames: this.anims.generateFrameNames('dude', { 
+				start: 9,
+				end: 9
+			}),
+				frameRate: 1,
 				repeat: -1
 		})
 		this.stars = this.physics.add.group( {
@@ -115,12 +124,32 @@ export default class Demo extends Phaser.Scene
 			return null;
 			
 		})
-
+		//Spawn enemies from all sides randomly.
 		this.time.addEvent({
-			delay:3000,
+			delay:1000,
 			callback: () => {
-				var x = (this.player.x < 400) ? Phaser.Math.Between(400,800) : Phaser.Math.Between(0, 400);
-				var bomb = this.bombs.create(x, 16, 'bomb');
+				var side = Phaser.Math.Between(0, 3);
+				var x;
+				var y;
+				switch(side) {
+					case 0: //top of the screen
+						x = Phaser.Math.Between(0,800);
+						y = 0;
+						break;
+					case 1: //right side
+						x = 800;
+						y = Phaser.Math.Between(0, 600);
+						break;
+					case 2: //bottom
+						x = Phaser.Math.Between(0, 800);
+						y = 600;
+						break;
+					case 3: //left side
+						x = 0;
+						y = Phaser.Math.Between(0, 600);
+						break;
+				}
+				var bomb = this.bombs.create(x, y, 'bomb');
 				bomb.setCollideWorldBounds(true);
 				bomb.setVelocity(Phaser.Math.Between(-300, 800),200); 
 			},
@@ -163,7 +192,7 @@ export default class Demo extends Phaser.Scene
 		var color = Phaser.Display.Color.GetColor32(255, 0, 0, 0);
 		bombSprite.disableBody(true, true)
 		this.timeRemaining -= 10;
-		this.player.anims.play('turn');
+		// this.player.anims.play('turn');
 		this.player.setTintFill(color).setAlpha(0.5)
 		
 		this.time.addEvent({
@@ -181,7 +210,7 @@ export default class Demo extends Phaser.Scene
 		if(this.timeRemaining <= 0) {
 			this.physics.pause(); 
 			this.gameOverText.setText("Game Over");
-			this.player.setTintFill(0x1AFF0000)
+			this.player.anims.play('dead')
 			this.gameOver = true;
 		}
 	
@@ -302,7 +331,7 @@ export default class Demo extends Phaser.Scene
 			let angle =
 			Phaser.Math.Angle.Between(newBomb.x, newBomb.y, this.player.x, this.player.y);
 			let velocity = new Phaser.Math.Vector2();
-			velocity.setToPolar(angle, 300);//speed of the bomb
+			velocity.setToPolar(angle, 200);//speed of the bomb
 
 			newBomb.setVelocity(velocity.x, velocity.y);
 			return null
